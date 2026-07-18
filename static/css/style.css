@@ -1,0 +1,200 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: #f0f4ff;
+  color: #333;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 700px;
+  margin: 60px auto;
+  background: #fff;
+  padding: 40px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  animation: fade 0.4s ease;
+}
+
+/* ---------------- HEADINGS ---------------- */
+
+h1 {
+  font-size: 2.4rem;
+  color: #03045e;
+  margin-bottom: 10px;
+}
+
+h3 {
+  font-size: 1.8rem;
+  color: #03045e;
+  margin-top: 36px;
+  margin-bottom: 18px;
+}
+
+p {
+  color: #03045e;
+  margin-bottom: 20px;
+  font-size: 1.05rem;
+}
+
+/* ---------------- INPUTS ---------------- */
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 15px 18px;
+  margin-bottom: 16px;
+
+  border: 1px solid #d8dce6;
+  border-radius: 8px;
+
+  font-size: 1rem;
+
+  outline: none;
+  transition: 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+  border-color: #00b4d8;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.15);
+}
+
+/* ---------------- BUTTON ---------------- */
+
+button {
+  width: 100%;
+  padding: 14px;
+
+  background: #00b4d8;
+  color: white;
+
+  border: none;
+  border-radius: 8px;
+
+  font-size: 1rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+button:hover {
+  background: #0077b6;
+}
+
+/* ---------------- LINK BOX ---------------- */
+
+.link-box {
+  border: 1px solid #dbe4ff;
+  border-radius: 10px;
+
+  padding: 18px;
+  margin: 20px 0;
+}
+
+#trip-link {
+  display: block;
+
+  font-size: 1.02rem;
+  font-weight: 500;
+
+  margin-bottom: 16px;
+
+  word-break: break-word;
+}
+
+#copy-btn {
+  margin-top: 6px;
+}
+
+/* ---------------- WELCOME ---------------- */
+
+.header {
+  font-size: 2.5rem;
+  color: #03045e;
+  font-weight: 800;
+  margin: 30px 0 25px;
+}
+
+/* ---------------- CHECKBOX ---------------- */
+
+.split-option {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  margin: 12px 0;
+
+  color: #0096c7;
+  font-size: 1.08rem;
+  font-weight: 500;
+}
+
+.participant-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #03045e;
+}
+
+/* ---------------- HR ---------------- */
+
+hr {
+  border: none;
+  border-top: 1px solid #ececec;
+  margin: 35px 0;
+}
+
+/* ---------------- HISTORY ---------------- */
+
+.history-item,
+.settlement-item {
+  padding: 10px 0;
+  line-height: 1.7;
+}
+
+.history-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+/* ---------------- FORM ---------------- */
+
+form {
+  margin-bottom: 24px;
+}
+
+/* ---------------- SUBMIT BUTTON ---------------- */
+
+#submit-btn {
+  margin-bottom: 40px;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

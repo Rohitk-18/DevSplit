@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ trip.name }} - DevSplit</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    {% with messages = get_flashed_messages() %} {% if messages %} {% for
+    message in messages %}
+    <p>{{ message }}</p>
+    {% endfor %} {% endif %} {% endwith %}
+    <div class="container">
+      <h1>{{ trip.name }}</h1>
+      <p>Share this link with your group.</p>
+
+      <div class="link-box">
+        <code id="trip-link">{{ request.url }}</code>
+        <button onclick="copyLink()" id="copy-btn">Copy Link</button>
+      </div>
+
+      <p>
+        Expires on <strong>{{ trip.expires_at.strftime('%d %B %Y') }}</strong>
+      </p>
+
+      {%if current_member %}
+      <h2 class="header">Welcome, {{ current_member.name }}!</h2>
+      <form
+        action="{{ url_for('main.add_expense', code = trip.code) }}"
+        method="POST"
+      >
+        <input
+          type="text"
+          name="description"
+          placeholder="Expense description"
+          required
+        />
+
+        <input
+          type="number"
+          name="amount"
+          placeholder="Enter amount"
+          required
+        />
+
+        <h3>Split Between ({{ trip.participants|length }})</h3>
+
+        <label class="select-all">
+          <input type="checkbox" id="select" onclick="selectAll()" />
+          <span>Select all</span>
+        </label>
+
+        <div class="participant-list">
+          {% for participant in trip.participants %}
+          <label class="split-option">
+            <input
+              type="checkbox"
+              name="split_among"
+              value="{{ participant.id  }}"
+              onclick="updateSelectAll()"
+            />
+            <span>{{ participant.name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <button type="submit">Add Expense</button>
+      </form>
+      {% else %}
+      <form
+        action="{{ url_for('main.join_trip', code = trip.code) }}"
+        method="POST"
+      >
+        <input type="text" name="name" placeholder="Enter your name" required />
+
+        <button id="submit-btn" type="submit">Join Trip</button>
+      </form>
+      {% endif %}
+
+      <hr />
+
+      <h3>Settlements ({{ settlements|length }})</h3>
+      {%if settlements %} {% for s in settlements %}
+      <p class="settlement-item">
+        <strong>{{ s['from'] }}</strong> pays <strong>{{ s['to'] }}</strong> ₹{{
+        "%.2f" % s['amount'] }}
+      </p>
+      {% endfor %} {% else %}
+      <p>No Settlements needed yet.</p>
+      {% endif %}
+
+      <hr />
+
+      <h3>History ({{ trip.expenses|length }})</h3>
+      <div class="history-list">
+        {% for expense in trip.expenses %}
+        <p class="history-item">
+          <strong>{{ expense.payer.name }}</strong> paid
+          <strong>₹{{ "%.2f" % expense.amount }}</strong> for
+          <strong>{{ expense.description}}</strong>
+        </p>
+        {% endfor %}
+      </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

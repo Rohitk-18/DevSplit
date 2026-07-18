@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevSplit - Split Expenses Easily</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    {% with messages = get_flashed_messages() %} {% if messages %} {% for
+    message in messages %} {{ message }} {% endfor %} {% endif %} {% endwith %}
+    <div class="container">
+      <h1>DevSplit</h1>
+      <p>Split expenses without the chaos. No Signup required.</p>
+
+      <form action="/create" method="POST">
+        <input
+          type="text"
+          name="trip_name"
+          placeholder="Enter trip name (e.g Goa Trip)"
+          required
+        />
+        <button type="submit">Create Trip</button>
+      </form>
+    </div>
+  </body>
+</html>
