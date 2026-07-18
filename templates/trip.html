@@ -101,6 +101,9 @@
           <strong>{{ expense.payer.name }}</strong> paid
           <strong>₹{{ "%.2f" % expense.amount }}</strong> for
           <strong>{{ expense.description}}</strong>
+          <small
+            >{{ expense.created_at.strftime('%d %b %Y, %I:%M %p') }} UTC</small
+          >
         </p>
         {% endfor %}
       </div>

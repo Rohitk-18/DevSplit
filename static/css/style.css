@@ -176,6 +176,11 @@ hr {
   padding: 8px;
 }
 
+small {
+  color: #999;
+  font-size: 0.78rem;
+}
+
 /* ---------------- FORM ---------------- */
 
 form {
