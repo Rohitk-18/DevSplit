@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, abort
 from models import db, Trip, Participant, Expense, ExpenseSplit
 from itsdangerous import URLSafeTimedSerializer
 from types import SimpleNamespace
@@ -29,7 +29,7 @@ def create_trip():
     db.session.commit()
 
     return redirect(url_for('main.trip_page', code=code))
-
+    
 @main.route('/trip/<code>')
 def trip_page(code):
     trip = Trip.query.filter_by(code=code).first_or_404()
@@ -39,22 +39,28 @@ def trip_page(code):
     current_member = None
     if 'session_token' in session:
         current_member=Participant.query.filter_by(session_token=session['session_token'], trip_id=trip.id).first()
-    settlements = calculate_settlements(trip.participants)
     
+    if current_member is None:
+        return redirect(url_for('main.join_trip', code=trip.code))
+    settlements = calculate_settlements(trip.participants)
     return render_template('trip.html', trip=trip, current_member=current_member, settlements = settlements)
 
 
-@main.route('/trip/<code>/join', methods=['POST'])
+@main.route('/trip/<code>/join', methods=['GET', 'POST'])
 def join_trip(code):
     trip = Trip.query.filter_by(code=code).first_or_404()
     if trip.expires_at < datetime.now():
         flash("Trip Expired!")
         return redirect(url_for('main.home'))
+    
+    if request.method == 'GET':
+        return render_template('join.html', trip=trip)
+    
     user_name = request.form.get('name', '').strip()
 
     if not user_name:
         flash("Name cannot be empty!")
-        return redirect(url_for('main.trip_page', code=code))
+        return redirect(url_for('main.join_trip', code=code))
 
     normalized_name = user_name.lower()
     display_name = user_name.title()
@@ -66,7 +72,7 @@ def join_trip(code):
     existing = Participant.query.filter(Participant.trip_id == trip.id, func.lower(Participant.name) == normalized_name).first()
     if existing:
         flash("A participant with this name already exists!")
-        return redirect(url_for('main.trip_page', code=code))
+        return redirect(url_for('main.join_trip', code=code))
 
     token = secrets.token_hex(32)
     member = Participant(name = display_name, trip_id = trip.id, session_token = token)
@@ -108,5 +114,84 @@ def add_expense(code):
 
     db.session.commit()
     return redirect(url_for('main.trip_page', code=code))
-    
 
+
+@main.route('/trip/<code>/expense/<expense_id>/delete', methods=["POST"]) 
+def delete_expense(code, expense_id):
+    expense = Expense.query.filter_by(id=expense_id).first_or_404()
+    trip = Trip.query.filter_by(code=code).first_or_404()
+
+    if expense.trip_id != trip.id:
+        abort(404)
+
+    current_member = Participant.query.filter_by(session_token=session.get('session_token'), trip_id=expense.trip_id).first()
+
+    if current_member is None or expense.paid_by != current_member.id:
+        abort(403)
+
+    ExpenseSplit.query.filter_by(expense_id=expense.id).delete()
+    db.session.delete(expense)
+    db.session.commit()
+
+    return redirect(url_for('main.trip_page', code=expense.trip.code))
+
+
+@main.route('/trip/<code>/expense/<expense_id>/edit', methods=["POST"])
+def edit_expense(code, expense_id):
+    trip = Trip.query.filter_by(code=code).first_or_404()
+    expense = Expense.query.filter_by(id=expense_id).first_or_404()
+
+    if expense.trip_id != trip.id:
+        abort(404)
+    
+    session_token = session.get("session_token")
+
+    current_member = Participant.query.filter_by(trip_id=trip.id, session_token=session_token).first()
+
+    if not current_member:
+        flash("Please join the trip first.")
+        return redirect(url_for('main.join_trip', code=trip.code))
+    
+    if expense.paid_by != current_member.id:
+        flash("You can only edit your own expenses.")
+        return redirect(url_for('main.trip_page', code=trip.code))
+    
+    description = request.form['description'].strip()
+    amount = float(request.form['amount'])
+    split_among = request.form.getlist('split_among')
+
+    if not description:
+        flash("Description cannot be empty.")
+        return redirect(url_for('main.trip_page', code=trip.code))
+    
+    if amount <= 0:
+        flash("Amount must be greater than zero")
+        return redirect(url_for('main.trip_page', code=trip.code))
+    
+    if not split_among:
+        flash("Select atleast one participant.")
+        return redirect(url_for('main.trip_page', code=trip.code))
+    
+    valid_ids = {
+        str(participant.id)
+        for participant in trip.participants
+        }
+    
+    for participant_id in split_among:
+        if participant_id not in valid_ids:
+            abort(400)
+
+    expense.description = description
+    expense.amount = amount
+
+    ExpenseSplit.query.filter_by(expense_id=expense.id).delete()
+
+    share = amount / len(split_among)
+
+    for participant_id in split_among:
+        split = ExpenseSplit(expense_id=expense.id, participant_id=participant_id, share_amount=share)
+        db.session.add(split)
+
+    db.session.commit()
+    flash("Expense updated successfully.")
+    return redirect(url_for('main.trip_page', code=trip.code))

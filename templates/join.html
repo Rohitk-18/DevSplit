@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Join Trip {{ trip.name }}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    {% with messages = get_flashed_messages() %} {% if messages %} {% for
+    message in messages %}
+    <p>{{ message }}</p>
+    {% endfor %} {% endif %} {% endwith %}
+
+    <div class="container">
+      <h1>{{ trip.name }}</h1>
+      <p>Enter your name to join this trip.</p>
+      <form
+        action="{{ url_for('main.join_trip', code=trip.code) }}"
+        method="POST"
+      >
+        <input type="text" name="name" placeholder="Enter your name" required />
+        <button>Join Trip</button>
+      </form>
+    </div>
+  </body>
+</html>

@@ -27,7 +27,6 @@
         Expires on <strong>{{ trip.expires_at.strftime('%d %B %Y') }}</strong>
       </p>
 
-      {%if current_member %}
       <h2 class="header">Welcome, {{ current_member.name }}!</h2>
       <form
         action="{{ url_for('main.add_expense', code = trip.code) }}"
@@ -69,17 +68,6 @@
         </div>
         <button type="submit">Add Expense</button>
       </form>
-      {% else %}
-      <form
-        action="{{ url_for('main.join_trip', code = trip.code) }}"
-        method="POST"
-      >
-        <input type="text" name="name" placeholder="Enter your name" required />
-
-        <button id="submit-btn" type="submit">Join Trip</button>
-      </form>
-      {% endif %}
-
       <hr />
 
       <h3>Settlements ({{ settlements|length }})</h3>
@@ -97,14 +85,105 @@
       <h3>History ({{ trip.expenses|length }})</h3>
       <div class="history-list">
         {% for expense in trip.expenses %}
-        <p class="history-item">
-          <strong>{{ expense.payer.name }}</strong> paid
-          <strong>₹{{ "%.2f" % expense.amount }}</strong> for
-          <strong>{{ expense.description}}</strong>
-          <small
-            >{{ expense.created_at.strftime('%d %b %Y, %I:%M %p') }} UTC</small
-          >
-        </p>
+        <div class="history-item">
+          <div class="history-main">
+            <div class="history-content">
+              <strong>{{ expense.payer.name }}</strong> paid
+              <strong>₹{{ "%.2f" % expense.amount }}</strong> for
+              <strong>{{ expense.description}}</strong>
+              <small
+                >{{ expense.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                UTC</small
+              >
+            </div>
+
+            {% if expense.payer.id == current_member.id %}
+            <div class="expense-actions">
+              <button
+                type="button"
+                class="icon-btn"
+                onclick="toggleEdit({{ expense.id }})"
+              >
+                ✏️
+              </button>
+
+              <form
+                action="{{ url_for('main.delete_expense', code=trip.code, expense_id=expense.id) }}"
+                method="POST"
+              >
+                <button
+                  type="submit"
+                  class="icon-btn"
+                  onclick="return confirm('Delete this expense?');"
+                >
+                  🗑️
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+          <div id="edit-form-{{ expense.id }}" class="edit-form hidden">
+            <form
+              action="{{ url_for('main.edit_expense', code=trip.code, expense_id=expense.id) }}"
+              method="POST"
+            >
+              <input
+                type="text"
+                name="description"
+                value="{{ expense.description }}"
+                required
+              />
+
+              <input
+                type="number"
+                name="amount"
+                value="{{ expense.amount}}"
+                required
+              />
+
+              <h4>Split Between</h4>
+              <div class="participant-list">
+                {% for participant in trip.participants %}
+                <label class="split-option">
+                  <input
+                    type="checkbox"
+                    name="split_among"
+                    value="{{ participant.id }}"
+                    {%
+                    for
+                    split
+                    in
+                    expense.splits
+                    %}
+                    {%
+                    if
+                    split.participant_id==participant.id
+                    %}
+                    checked
+                    {%
+                    endif
+                    %}
+                    {%
+                    endfor
+                    %}
+                  />
+
+                  {{ participant.name }}
+                </label>
+                {% endfor %}
+              </div>
+
+              <button type="submit">Save Changes</button>
+              <button
+                type="button"
+                class="cancel-btn"
+                onclick="toggleEdit({{ expense.id }})"
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
         {% endfor %}
       </div>
     </div>

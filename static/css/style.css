@@ -176,7 +176,23 @@ hr {
   padding: 8px;
 }
 
-small {
+.history-item {
+  position: relative;
+  padding: 12px 16px;
+}
+
+.history-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.history-content {
+  flex: 1;
+}
+
+.history-content small {
   color: #999;
   font-size: 0.78rem;
 }
@@ -185,6 +201,23 @@ small {
 
 form {
   margin-bottom: 24px;
+}
+
+.expense-actions {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.history-item:hover .expense-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.expense-actions form {
+  display: inline;
 }
 
 /* ---------------- SUBMIT BUTTON ---------------- */
@@ -202,4 +235,22 @@ form {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.hidden {
+  display: none;
+}
+
+.icon-btn {
+  width: auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 1rem;
+  color: inherit;
+}
+
+.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
 }

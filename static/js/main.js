@@ -31,3 +31,20 @@ function updateSelectAll() {
 
   selectAllBox.checked = allChecked;
 }
+
+let currentForm = null;
+function toggleEdit(expenseId) {
+  const form = document.getElementById(`edit-form-${expenseId}`);
+
+  if (currentForm && currentForm != form) {
+    currentForm.classList.add("hidden");
+  }
+
+  form.classList.toggle("hidden");
+
+  if (form.classList.contains("hidden")) {
+    currentForm = null;
+  } else {
+    currentForm = form;
+  }
+}
