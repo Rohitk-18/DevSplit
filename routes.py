@@ -34,11 +34,17 @@ def create_trip():
 def trip_page(code):
     trip = Trip.query.filter_by(code=code).first_or_404()
     if trip.expires_at < datetime.now():
+        trip_tokens = session.get('trip_tokens', {})
+        trip_tokens.pop(trip.code, None)
+        session['trip_tokens'] = trip_tokens
+        session.modified = True
         flash("Trip Expired!")
         return redirect(url_for('main.home'))
     current_member = None
-    if 'session_token' in session:
-        current_member=Participant.query.filter_by(session_token=session['session_token'], trip_id=trip.id).first()
+    trip_tokens = session.get('trip_tokens', {})
+    token = trip_tokens.get(trip.code)
+    if token:
+        current_member = Participant.query.filter_by(session_token=token, trip_id=trip.id).first()
     
     if current_member is None:
         return redirect(url_for('main.join_trip', code=trip.code))
@@ -65,8 +71,9 @@ def join_trip(code):
     normalized_name = user_name.lower()
     display_name = user_name.title()
 
-    current_session = session.get('session_token')
-    if current_session and Participant.query.filter_by(session_token=current_session, trip_id=trip.id).first():
+    trip_tokens = session.get('trip_tokens', {})
+    current_token = trip_tokens.get(trip.code)
+    if current_token and Participant.query.filter_by(session_token=current_token, trip_id=trip.id).first():
         return redirect(url_for('main.trip_page', code=code))
 
     existing = Participant.query.filter(Participant.trip_id == trip.id, func.lower(Participant.name) == normalized_name).first()
@@ -80,7 +87,11 @@ def join_trip(code):
     db.session.add(member)
     db.session.commit()
 
-    session['session_token'] = token
+    trip_tokens = session.get("trip_tokens", {})
+    trip_tokens[trip.code] = token
+
+    session["trip_tokens"] = trip_tokens
+    session.permanent = True
     return redirect(url_for('main.trip_page', code = code))
 
 
@@ -90,9 +101,15 @@ def add_expense(code):
     if trip.expires_at < datetime.now():
         flash("Trip Expired!")
         return redirect(url_for('main.home'))
-    paid_by=None
-    if 'session_token' in session:
-        paid_by=Participant.query.filter_by(session_token=session['session_token']).first()
+
+    session_token = session.get("trip_tokens", {}).get(trip.code)
+
+    paid_by = Participant.query.filter_by(trip_id=trip.id, session_token=session_token).first()
+    if not paid_by:
+        flash("Please join the trip first.")
+        return redirect(url_for('main.join_trip', code=trip.code))
+
+    
     description=request.form.get('description')
     amount=float(request.form.get('amount'))
     if amount <= 0:
@@ -105,7 +122,7 @@ def add_expense(code):
         return redirect(url_for('main.trip_page', code = code))
     expense=Expense(trip_id=trip.id, paid_by=paid_by.id, amount=amount, description=description)
     db.session.add(expense)
-    db.session.commit()
+    db.session.flush()
 
     share=amount / len(split_among)
     for user in split_among:
@@ -124,7 +141,7 @@ def delete_expense(code, expense_id):
     if expense.trip_id != trip.id:
         abort(404)
 
-    current_member = Participant.query.filter_by(session_token=session.get('session_token'), trip_id=expense.trip_id).first()
+    current_member = Participant.query.filter_by(trip_id=trip.id, session_token=session.get('trip_tokens', {}).get(trip.code)).first()
 
     if current_member is None or expense.paid_by != current_member.id:
         abort(403)
@@ -144,7 +161,7 @@ def edit_expense(code, expense_id):
     if expense.trip_id != trip.id:
         abort(404)
     
-    session_token = session.get("session_token")
+    session_token = session.get('trip_tokens', {}).get(trip.code)
 
     current_member = Participant.query.filter_by(trip_id=trip.id, session_token=session_token).first()
 

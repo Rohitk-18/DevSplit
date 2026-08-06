@@ -48,3 +48,11 @@ function toggleEdit(expenseId) {
     currentForm = form;
   }
 }
+
+setTimeout(function() {
+    document.querySelectorAll('.flash-message').forEach(function(msg) {
+        msg.style.transition = 'opacity 0.5s ease';
+        msg.style.opacity = '0';
+        setTimeout(function() { msg.style.display = 'none'; }, 500);
+    });
+}, 3000);

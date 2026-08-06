@@ -8,11 +8,12 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </head>
   <body>
     {% with messages = get_flashed_messages() %} {% if messages %} {% for
     message in messages %}
-    <p>{{ message }}</p>
+    <div class="flash-message">{{ message }}</div>
     {% endfor %} {% endif %} {% endwith %}
     <div class="container">
       <h1>{{ trip.name }}</h1>
@@ -104,7 +105,7 @@
                 class="icon-btn"
                 onclick="toggleEdit({{ expense.id }})"
               >
-                ✏️
+                <i class="fa-solid fa-pen"></i>
               </button>
 
               <form
@@ -116,7 +117,7 @@
                   class="icon-btn"
                   onclick="return confirm('Delete this expense?');"
                 >
-                  🗑️
+                  <i class="fa-solid fa-trash"></i>
                 </button>
               </form>
             </div>
@@ -137,7 +138,7 @@
               <input
                 type="number"
                 name="amount"
-                value="{{ expense.amount}}"
+                value="{{ "%.2f" % expense.amount}}"
                 required
               />
 
@@ -173,6 +174,7 @@
                 {% endfor %}
               </div>
 
+              <div class="edit-actions">
               <button type="submit">Save Changes</button>
               <button
                 type="button"
@@ -181,6 +183,7 @@
               >
                 Cancel
               </button>
+              </div>
             </form>
           </div>
         </div>

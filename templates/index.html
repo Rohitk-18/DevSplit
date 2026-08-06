@@ -8,10 +8,11 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </head>
   <body>
     {% with messages = get_flashed_messages() %} {% if messages %} {% for
-    message in messages %} {{ message }} {% endfor %} {% endif %} {% endwith %}
+    message in messages %} <div class="flash-message">{{ message }}</div> {% endfor %} {% endif %} {% endwith %}
     <div class="container">
       <h1>DevSplit</h1>
       <p>Split expenses without the chaos. No Signup required.</p>
@@ -26,5 +27,6 @@
         <button type="submit">Create Trip</button>
       </form>
     </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
 </html>
