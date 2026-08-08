@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from models import db, Trip, Participant, Expense, ExpenseSplit
 from itsdangerous import URLSafeTimedSerializer
 from types import SimpleNamespace
-import os, secrets
+import os, secrets, re
 from utils import calculate_settlements
 from datetime import datetime, timezone
 from sqlalchemy import func
@@ -63,10 +63,19 @@ def join_trip(code):
         return render_template('join.html', trip=trip)
     
     user_name = request.form.get('name', '').strip()
-
+    
     if not user_name:
         flash("Name cannot be empty!")
         return redirect(url_for('main.join_trip', code=code))
+
+    if len(user_name) > 50:
+        flash("Name cannot exceed 50 characters.")
+        return redirect(url_for('main.join_trip', code=code))
+
+    if not re.fullmatch(r"[A-Za-z ]+", user_name):
+        flash("Name can only contain letters and spaces.")
+        return redirect(url_for("main.join_trip", code=code))
+        
 
     normalized_name = user_name.lower()
     display_name = user_name.title()
@@ -110,7 +119,19 @@ def add_expense(code):
         return redirect(url_for('main.join_trip', code=trip.code))
 
     
-    description=request.form.get('description')
+    description=request.form.get('description', '').strip()
+    if not re.fullmatch(r"[A-Za-z0-9\s.,()&'/-]+", description):
+        flash("Description contains invalid characters.")
+        return redirect(url_for("main.trip_page", code=code))
+
+    if len(description) > 100:
+        flash("Description cannot exceed 100 characters.")
+        return redirect(url_for("main.trip_page", code=code))
+
+    if description.isdigit():
+        flash("Description cannot contain only numbers.")
+        return redirect(url_for("main.trip_page", code=code))
+    
     amount=float(request.form.get('amount'))
     if amount <= 0:
         flash("Amount must be greater than zero!")
@@ -138,6 +159,10 @@ def delete_expense(code, expense_id):
     expense = Expense.query.filter_by(id=expense_id).first_or_404()
     trip = Trip.query.filter_by(code=code).first_or_404()
 
+    if trip.expires_at < datetime.now():
+            flash("Trip Expired!")
+            return redirect(url_for('main.home'))
+
     if expense.trip_id != trip.id:
         abort(404)
 
@@ -158,6 +183,10 @@ def edit_expense(code, expense_id):
     trip = Trip.query.filter_by(code=code).first_or_404()
     expense = Expense.query.filter_by(id=expense_id).first_or_404()
 
+    if trip.expires_at < datetime.now():
+            flash("Trip Expired!")
+            return redirect(url_for('main.home'))
+
     if expense.trip_id != trip.id:
         abort(404)
     
@@ -174,12 +203,25 @@ def edit_expense(code, expense_id):
         return redirect(url_for('main.trip_page', code=trip.code))
     
     description = request.form['description'].strip()
-    amount = float(request.form['amount'])
-    split_among = request.form.getlist('split_among')
 
     if not description:
-        flash("Description cannot be empty.")
-        return redirect(url_for('main.trip_page', code=trip.code))
+            flash("Description cannot be empty.")
+            return redirect(url_for('main.trip_page', code=trip.code))
+
+    if not re.fullmatch(r"[A-Za-z0-9\s.,()&'/-]+", description):
+        flash("Description contains invalid characters.")
+        return redirect(url_for("main.trip_page", code=code))
+
+    if len(description) > 100:
+        flash("Description cannot exceed 100 characters.")
+        return redirect(url_for("main.trip_page", code=code))
+
+    if description.isdigit():
+        flash("Description cannot contain only numbers.")
+        return redirect(url_for("main.trip_page", code=code))
+    
+    amount = float(request.form['amount'])
+    split_among = request.form.getlist('split_among')
     
     if amount <= 0:
         flash("Amount must be greater than zero")
