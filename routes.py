@@ -1,8 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, abort
 from models import db, Trip, Participant, Expense, ExpenseSplit
 from itsdangerous import URLSafeTimedSerializer
-from types import SimpleNamespace
-import os, secrets, re
+import os, secrets, re, math
 from utils import calculate_settlements
 from datetime import datetime, timezone
 from sqlalchemy import func
@@ -17,9 +16,13 @@ def home():
 
 @main.route('/create', methods=['POST'])
 def create_trip():
-    trip_name = request.form.get('trip_name')
+    trip_name = request.form.get('trip_name', '').strip()
 
     if not trip_name:
+        return redirect(url_for('main.home'))
+
+    if len(trip_name) > 25:
+        flash("Trip name cannot exceed 25 characters.")
         return redirect(url_for('main.home'))
     
     code = s.dumps(trip_name + str(os.urandom(8)))[:32]
@@ -33,7 +36,7 @@ def create_trip():
 @main.route('/trip/<code>')
 def trip_page(code):
     trip = Trip.query.filter_by(code=code).first_or_404()
-    if trip.expires_at < datetime.now():
+    if trip.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         trip_tokens = session.get('trip_tokens', {})
         trip_tokens.pop(trip.code, None)
         session['trip_tokens'] = trip_tokens
@@ -55,21 +58,30 @@ def trip_page(code):
 @main.route('/trip/<code>/join', methods=['GET', 'POST'])
 def join_trip(code):
     trip = Trip.query.filter_by(code=code).first_or_404()
-    if trip.expires_at < datetime.now():
+    if trip.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         flash("Trip Expired!")
         return redirect(url_for('main.home'))
     
+    trip_tokens = session.get('trip_tokens', {})
+    current_token = trip_tokens.get(trip.code)
+
+    if current_token and Participant.query.filter_by(
+        session_token=current_token,
+        trip_id=trip.id
+    ).first():
+        return redirect(url_for('main.trip_page', code=code))
+
     if request.method == 'GET':
         return render_template('join.html', trip=trip)
-    
+
     user_name = request.form.get('name', '').strip()
     
     if not user_name:
         flash("Name cannot be empty!")
         return redirect(url_for('main.join_trip', code=code))
 
-    if len(user_name) > 50:
-        flash("Name cannot exceed 50 characters.")
+    if len(user_name) > 30:
+        flash("Name cannot exceed 30 characters.")
         return redirect(url_for('main.join_trip', code=code))
 
     if not re.fullmatch(r"[A-Za-z ]+", user_name):
@@ -79,11 +91,6 @@ def join_trip(code):
 
     normalized_name = user_name.lower()
     display_name = user_name.title()
-
-    trip_tokens = session.get('trip_tokens', {})
-    current_token = trip_tokens.get(trip.code)
-    if current_token and Participant.query.filter_by(session_token=current_token, trip_id=trip.id).first():
-        return redirect(url_for('main.trip_page', code=code))
 
     existing = Participant.query.filter(Participant.trip_id == trip.id, func.lower(Participant.name) == normalized_name).first()
     if existing:
@@ -107,7 +114,7 @@ def join_trip(code):
 @main.route('/trip/<code>/add_expense', methods=['POST'])
 def add_expense(code):
     trip=Trip.query.filter_by(code=code).first_or_404()
-    if trip.expires_at < datetime.now():
+    if trip.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         flash("Trip Expired!")
         return redirect(url_for('main.home'))
 
@@ -132,15 +139,34 @@ def add_expense(code):
         flash("Description cannot contain only numbers.")
         return redirect(url_for("main.trip_page", code=code))
     
-    amount=float(request.form.get('amount'))
+    try:
+        amount = float(request.form.get('amount', 0))
+    except (ValueError, TypeError):
+        flash("Invalid amount entered.")
+        return redirect(url_for('main.trip_page', code=code))
+
+    if not math.isfinite(amount):
+        flash("Invalid amount entered.")
+        return redirect(url_for('main.trip_page', code=code))
+
     if amount <= 0:
         flash("Amount must be greater than zero!")
-        return redirect(url_for('main.trip_page', code = code))
+        return redirect(url_for('main.trip_page', code=code))
     
-    split_among=request.form.getlist('split_among')
+    split_among=list(dict.fromkeys(request.form.getlist('split_among')))
     if not split_among:
         flash("Please select atleast one person to split with!")
         return redirect(url_for('main.trip_page', code = code))
+
+    valid_ids = {
+        str(participant.id)
+        for participant in trip.participants
+    }
+
+    for participant_id in split_among:
+        if participant_id not in valid_ids:
+            abort(400)
+    
     expense=Expense(trip_id=trip.id, paid_by=paid_by.id, amount=amount, description=description)
     db.session.add(expense)
     db.session.flush()
@@ -159,7 +185,7 @@ def delete_expense(code, expense_id):
     expense = Expense.query.filter_by(id=expense_id).first_or_404()
     trip = Trip.query.filter_by(code=code).first_or_404()
 
-    if trip.expires_at < datetime.now():
+    if trip.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             flash("Trip Expired!")
             return redirect(url_for('main.home'))
 
@@ -183,7 +209,7 @@ def edit_expense(code, expense_id):
     trip = Trip.query.filter_by(code=code).first_or_404()
     expense = Expense.query.filter_by(id=expense_id).first_or_404()
 
-    if trip.expires_at < datetime.now():
+    if trip.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             flash("Trip Expired!")
             return redirect(url_for('main.home'))
 
@@ -220,8 +246,17 @@ def edit_expense(code, expense_id):
         flash("Description cannot contain only numbers.")
         return redirect(url_for("main.trip_page", code=code))
     
-    amount = float(request.form['amount'])
-    split_among = request.form.getlist('split_among')
+    try:
+        amount = float(request.form.get('amount', 0))
+    except (ValueError, TypeError):
+        flash("Invalid amount entered.")
+        return redirect(url_for('main.trip_page', code=trip.code))
+
+    if not math.isfinite(amount):
+        flash("Invalid amount entered.")
+        return redirect(url_for('main.trip_page', code=trip.code))
+    
+    split_among = list(dict.fromkeys(request.form.getlist('split_among')))
     
     if amount <= 0:
         flash("Amount must be greater than zero")

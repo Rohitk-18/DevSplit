@@ -7,8 +7,8 @@ class Trip(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(25), nullable=False)
     code = db.Column(db.String(64), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    expires_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc) + timedelta(days=10))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    expires_at = db.Column(db.DateTime, default=lambda: (datetime.now(timezone.utc) + timedelta(days=10)).replace(tzinfo=None))
     participants = db.relationship('Participant', backref='trip', lazy=True)
     expenses = db.relationship('Expense', backref='trip', lazy=True, order_by='Expense.created_at.desc()')
 
@@ -26,7 +26,7 @@ class Expense(db.Model):
     paid_by = db.Column(db.Integer, db.ForeignKey('participant.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     splits = db.relationship('ExpenseSplit', backref='expense', lazy=True)
     payer = db.relationship('Participant', foreign_keys=[paid_by])
 
