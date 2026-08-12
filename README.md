@@ -152,7 +152,6 @@ Create a `.env` file:
 
 ```env
 SECRET_KEY=your-secret-key-here
-DATABASE_URL=sqlite:///DevSplit.db
 ```
 
 Run the application:
